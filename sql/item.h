@@ -420,6 +420,7 @@ typedef enum monotonicity_info
 /*************************************************************************/
 
 class sp_rcontext;
+class sp_cursor;
 
 /**
   A helper class to collect different behavior of various kinds of SP variables:
@@ -431,6 +432,8 @@ class sp_rcontext;
 class Sp_rcontext_handler
 {
 public:
+  static bool dereference(Field *ref, uint *deref_pos, uint max_deref_pos);
+
   virtual ~Sp_rcontext_handler() = default;
   /**
     A prefix used for SP variable names in queries:
@@ -453,6 +456,8 @@ public:
     depending on the SP variable kind.
   */
   virtual sp_rcontext *get_rcontext(sp_rcontext *ctx) const= 0;
+  virtual Item_field *get_variable(THD *thd, uint offset) const= 0;
+  virtual sp_cursor *get_cursor(THD *thd, uint offset) const= 0;
 };
 
 
@@ -461,6 +466,8 @@ class Sp_rcontext_handler_local: public Sp_rcontext_handler
 public:
   const LEX_CSTRING *get_name_prefix() const override;
   sp_rcontext *get_rcontext(sp_rcontext *ctx) const override;
+  Item_field *get_variable(THD *thd, uint offset) const override;
+  sp_cursor *get_cursor(THD *thd, uint offset) const override;
 };
 
 
@@ -469,6 +476,34 @@ class Sp_rcontext_handler_package_body: public Sp_rcontext_handler
 public:
   const LEX_CSTRING *get_name_prefix() const override;
   sp_rcontext *get_rcontext(sp_rcontext *ctx) const override;
+  Item_field *get_variable(THD *thd, uint offset) const override;
+  sp_cursor *get_cursor(THD *thd, uint offset) const override
+  {
+    /*
+      There are no package body wide cursors yet:
+      MDEV-36053 Syntax error on a CURSOR..IS declaration in PACKAGE BODY
+    */
+    DBUG_ASSERT(0);
+    return nullptr;
+  }
+};
+
+
+class Sp_rcontext_handler_session: public Sp_rcontext_handler
+{
+public:
+  const LEX_CSTRING *get_name_prefix() const override;
+  sp_rcontext *get_rcontext(sp_rcontext *ctx) const override
+  {
+    DBUG_ASSERT(0); // There are no session wide SP variables yet.
+    return nullptr;
+  }
+  Item_field *get_variable(THD *thd, uint offset) const override
+  {
+    DBUG_ASSERT(0); // There are no session wide SP variables yet.
+    return nullptr;
+  }
+  sp_cursor *get_cursor(THD *thd, uint offset) const override;
 };
 
 
@@ -479,6 +514,9 @@ extern MYSQL_PLUGIN_IMPORT
 extern MYSQL_PLUGIN_IMPORT
   Sp_rcontext_handler_package_body sp_rcontext_handler_package_body;
 
+
+extern MYSQL_PLUGIN_IMPORT
+  Sp_rcontext_handler_session sp_rcontext_handler_session;
 
 
 class Item_equal;
@@ -2519,6 +2557,7 @@ public:
   bool check_type_or_binary(const LEX_CSTRING &opname,
                             const Type_handler *handler) const;
   bool check_type_general_purpose_string(const LEX_CSTRING &opname) const;
+  bool check_type_can_return_bool(const LEX_CSTRING &opname) const;
   bool check_type_can_return_int(const LEX_CSTRING &opname) const;
   bool check_type_can_return_decimal(const LEX_CSTRING &opname) const;
   bool check_type_can_return_real(const LEX_CSTRING &opname) const;

@@ -1085,4 +1085,18 @@ protected:
   uint m_offset;               ///< Frame offset
 };
 
+
+class sp_rcontext_addr_or_ref: public sp_rcontext_addr
+{
+public:
+  sp_rcontext_addr_or_ref(const sp_rcontext_addr &addr,
+                          const Sp_rcontext_handler *ref)
+   :sp_rcontext_addr(addr),
+    m_ref_context_handler(ref)
+  { }
+protected:
+  const Sp_rcontext_handler *m_ref_context_handler;
+};
+
+
 #endif /* STRUCTS_INCLUDED */

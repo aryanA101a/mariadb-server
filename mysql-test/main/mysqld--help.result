@@ -663,6 +663,9 @@ The following specify which files/extra groups are read (specified before remain
  --max-seeks-for-key=# 
  Limit assumed max number of seeks when looking up rows
  based on a key
+ --max-session-cursors=# 
+ The maximum number of open SYS_REFCUROR allowed per
+ session
  --max-session-mem-used=# 
  Amount of memory a single user session is allowed to
  allocate. This limits the value of the session variable
@@ -1782,6 +1785,7 @@ max-recursive-iterations 1000
 max-relay-log-size 1073741824
 max-rowid-filter-size 131072
 max-seeks-for-key 18446744073709551615
+max-session-cursors 50
 max-session-mem-used 9223372036854775807
 max-sort-length 1024
 max-sp-recursion-depth 0

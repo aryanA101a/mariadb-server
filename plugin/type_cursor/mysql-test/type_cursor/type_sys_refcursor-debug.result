@@ -1,0 +1,21 @@
+#
+# MDEV-20034 Add support for the pre-defined weak SYS_REFCURSOR
+#
+CREATE PROCEDURE p1()
+BEGIN
+DECLARE c SYS_REFCURSOR;
+DECLARE a, b INT;
+OPEN c FOR SELECT 1, 2;
+FETCH c INTO a, b;
+CLOSE c;
+END;
+$$
+SHOW PROCEDURE CODE p1;
+Pos	Instruction
+0	set c@0 NULL
+1	set a@1 NULL
+2	set b@2 NULL
+3	copen session_cursor[c@0]
+4	cfetch session_cursor[c@0] a@1 b@2
+5	cclose session_cursor[c@0]
+DROP PROCEDURE p1;

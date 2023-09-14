@@ -34,6 +34,20 @@
 
 Sp_rcontext_handler_local sp_rcontext_handler_local;
 Sp_rcontext_handler_package_body sp_rcontext_handler_package_body;
+Sp_rcontext_handler_session sp_rcontext_handler_session;
+
+
+bool Sp_rcontext_handler::dereference(Field *field,
+                                      uint *deref_pos,
+                                      uint max_deref_pos)
+{
+  uint val;
+  if (field->is_null() || (val= (uint) field->val_int()) >= max_deref_pos)
+    return true;
+  *deref_pos= val;
+  return false;
+}
+
 
 sp_rcontext *Sp_rcontext_handler_local::get_rcontext(sp_rcontext *ctx) const
 {
@@ -55,6 +69,38 @@ const LEX_CSTRING *Sp_rcontext_handler_package_body::get_name_prefix() const
   static const LEX_CSTRING sp_package_body_variable_prefix_clex_str=
                            {STRING_WITH_LEN("PACKAGE_BODY.")};
   return &sp_package_body_variable_prefix_clex_str;
+}
+
+const LEX_CSTRING *Sp_rcontext_handler_session::get_name_prefix() const
+{
+  static const LEX_CSTRING prefix= {STRING_WITH_LEN("SESSION.")};
+  return &prefix;
+}
+
+
+Item_field *Sp_rcontext_handler_local::get_variable(THD *thd,
+                                                    uint offset) const
+{
+  return thd->spcont->get_variable(offset);
+}
+
+
+Item_field *Sp_rcontext_handler_package_body::get_variable(THD *thd,
+                                                           uint offset) const
+{
+  return Sp_rcontext_handler_package_body::get_rcontext(thd->spcont)->
+                                             get_variable(offset);
+}
+
+
+sp_cursor *Sp_rcontext_handler_local::get_cursor(THD *thd, uint offset) const
+{
+  return thd->spcont->get_cursor(offset);
+}
+
+sp_cursor *Sp_rcontext_handler_session::get_cursor(THD *thd, uint offset) const
+{
+  return &thd->m_session_cursors.at(offset);
 }
 
 

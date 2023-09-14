@@ -1573,6 +1573,7 @@ void THD::change_user(void)
                get_sequence_last_key, free_sequence_last,
                HASH_THREAD_SPECIFIC);
   sp_caches_clear();
+  m_session_cursors.free();
   opt_trace.delete_traces();
 }
 
@@ -1704,6 +1705,7 @@ void THD::cleanup(void)
   my_hash_free(&user_vars);
   my_hash_free(&sequences);
   sp_caches_clear();
+  m_session_cursors.free();
   auto_inc_intervals_forced.empty();
   auto_inc_intervals_in_cur_stmt_for_binlog.empty();
 
@@ -1852,6 +1854,9 @@ THD::~THD()
 #ifndef EMBEDDED_LIBRARY
   if (rgi_slave)
     rgi_slave->cleanup_after_session();
+
+  m_session_cursors.free();
+
   my_free(semisync_info);
 #endif
   main_lex.free_set_stmt_mem_root();
@@ -2387,6 +2392,13 @@ void THD::cleanup_after_query()
   DBUG_ENTER("THD::cleanup_after_query");
 
   thd_progress_end(this);
+
+  /*
+    This closes all SYS_REFCURSOR entries which
+    did not have explicit CLOSE in the SP code.
+  */
+  if (!lex->sphead && !in_sub_stmt)
+    m_session_cursors.close();
 
   /*
     Reset RAND_USED so that detection of calls to rand() will save random
@@ -3167,6 +3179,20 @@ void Item_change_list::rollback_item_tree_changes()
 /*****************************************************************************
 ** Functions to provide a interface to select results
 *****************************************************************************/
+
+int select_result_sink::send_data_with_check(List<Item> &items,
+                                             SELECT_LEX_UNIT *u,
+                                             ha_rows sent)
+{
+  if (u->lim.check_offset(sent))
+    return 0;
+
+  if (u->thd->killed == ABORT_QUERY)
+    return 0;
+
+  return send_data(items);
+}
+
 
 void select_result::reset_for_next_ps_execution()
 {
@@ -4417,6 +4443,32 @@ bool my_var_user::set(THD *thd, Item *item)
 }
 
 
+sp_cursor* THD::get_cursor(const sp_rcontext_addr &addr,
+                           const Sp_rcontext_handler *pointer)
+{
+  DBUG_ASSERT(spcont);
+  if (pointer) // e.g. SYS_REFCURSOR
+  {
+    Field *ref= get_variable(addr)->field;
+    return m_session_cursors.get_cursor_by_ref(ref);
+  }
+  return spcont->get_cursor(addr.offset()); // Static CURSOR
+}
+
+
+sp_cursor* THD::get_open_cursor_or_error(const sp_rcontext_addr &addr,
+                                         const Sp_rcontext_handler *pointer)
+{
+  sp_cursor *c= get_cursor(addr, pointer);
+  if (!c || !c->is_open())
+  {
+    my_error(ER_SP_CURSOR_NOT_OPEN, MYF(0));
+    return NULL;
+  }
+  return c;
+}
+
+
 sp_rcontext *my_var_sp::get_rcontext(sp_rcontext *local_ctx) const
 {
   return m_rcontext_handler->get_rcontext(local_ctx);
@@ -4435,13 +4487,13 @@ bool my_var_sp_row_field::set(THD *thd, Item *item)
 }
 
 
-sp_rcontext *THD::get_rcontext(const sp_rcontext_addr &addr)
+sp_rcontext *THD::get_rcontext(const sp_rcontext_addr &addr) const
 {
   return addr.rcontext_handler()->get_rcontext(spcont);
 }
 
 
-Item_field *THD::get_variable(const sp_rcontext_addr &addr)
+Item_field *THD::get_variable(const sp_rcontext_addr &addr) const
 {
   return get_rcontext(addr)->get_variable(addr.offset());
 }
