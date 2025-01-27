@@ -789,10 +789,14 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
           break;
       }
     }
+    /* Do required cleanup. This is also needed in case of errors */
     end_read_record(&info);
-    if (unlikely(deltempfile->get(table)) ||
-        unlikely(table->file->ha_index_or_rnd_end()) ||
-        unlikely(init_read_record(&info, thd, table, 0, &deltempfile->sort, 0,
+    error= (deltempfile->get(table) |
+            table->file->ha_index_or_rnd_end());
+    if (error || thd->is_error())
+      goto terminate_delete;
+
+    if (unlikely(init_read_record(&info, thd, table, 0, &deltempfile->sort, 0,
                                   1, false)))
     {
       error= 1;
