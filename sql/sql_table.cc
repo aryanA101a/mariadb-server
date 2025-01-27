@@ -11510,7 +11510,7 @@ copy_data_between_tables(THD *thd, TABLE *from, TABLE *to, bool ignore,
 
   from->file->column_bitmaps_signal();
 
-  to->file->prepare_for_insert(0);
+  to->file->prepare_for_insert(0);              // Cannot fail
   DBUG_ASSERT(to->file->inited == handler::NONE);
 
   /* Tell handler that we have values for all columns in the to table */

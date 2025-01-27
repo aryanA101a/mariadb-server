@@ -791,7 +791,7 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
     }
     /* Do required cleanup. This is also needed in case of errors */
     end_read_record(&info);
-    error= (deltempfile->get(table) |
+    error= (((int)deltempfile->get(table)) |
             table->file->ha_index_or_rnd_end());
     if (error || thd->is_error())
       goto terminate_delete;
@@ -824,7 +824,9 @@ bool mysql_delete(THD *thd, TABLE_LIST *table_list, COND *conds,
           && table->file->has_transactions();
 
   if (table->versioned(VERS_TIMESTAMP) || (table_list->has_period()))
-    table->file->prepare_for_insert(1);
+    if (table->file->prepare_for_insert(1))
+      goto terminate_delete;
+
   DBUG_ASSERT(table->file->inited != handler::NONE);
 
   THD_STAGE_INFO(thd, stage_updating);
@@ -1325,7 +1327,8 @@ multi_delete::initialize_tables(JOIN *join)
       tbl->prepare_for_position();
 
       if (tbl->versioned(VERS_TIMESTAMP))
-        tbl->file->prepare_for_insert(1);
+        if (tbl->file->prepare_for_insert(1))
+          DBUG_RETURN(1);
     }
     else if ((tab->type != JT_SYSTEM && tab->type != JT_CONST) &&
              walk == delete_tables)

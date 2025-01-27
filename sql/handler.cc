@@ -3318,12 +3318,31 @@ err:
 int handler::create_lookup_handler()
 {
   handler *tmp;
+  int error;
+
+  /* We cannot have more than 1 lookup handler */
   if (lookup_handler != this)
+  {
+    /*
+      We could have an assert here, by we cannot as insert delayed
+      calls this for each insert.
+    */
     return 0;
+  }
   if (!(tmp= clone(table->s->normalized_path.str, table->in_use->mem_root)))
+  {
+    my_error(ER_UNKNOWN_ERROR, MYF(0), "handler clone failed for table '%s'",
+             table->s->table_name);
     return 1;
+  }
+  if ((error= tmp->ha_external_lock(table->in_use, F_RDLCK)))
+  {
+    tmp->print_error(error, MYF(0));
+    tmp->close();
+    delete tmp;
+  }
   lookup_handler= tmp;
-  return lookup_handler->ha_external_lock(table->in_use, F_RDLCK);
+  return 0;
 }
 
 LEX_CSTRING *handler::engine_name()
