@@ -4694,7 +4694,7 @@ void print_keydup_error(TABLE *table, KEY *key, myf errflag)
 
 #define SET_FATAL_ERROR fatal_error=1
 
-void handler::print_error(int error, myf errflag)
+void handler:: print_error(int error, myf errflag)
 {
   bool fatal_error= 0;
   DBUG_ENTER("handler::print_error");
@@ -4769,6 +4769,10 @@ void handler::print_error(int error, myf errflag)
   }
   case HA_ERR_FOREIGN_DUPLICATE_KEY:
   {
+    if (!table) {
+      my_error(ER_DUP_CONSTRAINT_NAME_2, MYF(0));
+      DBUG_VOID_RETURN;
+    }
     char rec_buf[MAX_KEY_LENGTH];
     String rec(rec_buf, sizeof(rec_buf), system_charset_info);
     /* Table is opened and defined at this point */
