@@ -7286,11 +7286,16 @@ extern "C" check_result_t handler_index_cond_check(void* h_arg)
     if (killed > abort_at)
       return CHECK_ABORTED_BY_USER;
   }
-  if (unlikely(h->end_range) && h->compare_key2(h->end_range) > 0)
-    return CHECK_OUT_OF_RANGE;
   h->increment_statistics(&SSV::ha_icp_attempts);
   if (unlikely(h->handler_stats))
     h->handler_stats->icp_attempts++;
+  if (unlikely(h->end_range) && h->compare_key2(h->end_range) > 0)
+  {
+    h->fast_increment_statistics(&SSV::ha_icp_miss);
+    if (unlikely(h->handler_stats))
+      ++h->handler_stats->icp_miss;
+    return CHECK_OUT_OF_RANGE;
+  }
   res= CHECK_NEG;
   if  (h->pushed_idx_cond->val_bool())
   {
@@ -7298,6 +7303,12 @@ extern "C" check_result_t handler_index_cond_check(void* h_arg)
     h->fast_increment_statistics(&SSV::ha_icp_match);
     if (unlikely(h->handler_stats))
       h->handler_stats->icp_match++;
+  }
+  else
+  {
+    h->fast_increment_statistics(&SSV::ha_icp_miss);
+    if (unlikely(h->handler_stats))
+      ++h->handler_stats->icp_miss;
   }
   return res;
 }

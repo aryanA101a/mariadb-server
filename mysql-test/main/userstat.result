@@ -123,6 +123,7 @@ Handler_discover	0
 Handler_external_lock	0
 Handler_icp_attempts	0
 Handler_icp_match	0
+Handler_icp_miss	0
 Handler_mrr_init	0
 Handler_mrr_key_refills	0
 Handler_mrr_rowid_refills	0

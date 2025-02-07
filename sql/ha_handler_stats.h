@@ -53,7 +53,8 @@ public:
     Index Condition Pushdown: number of times condition check evaluated to TRUE
   */
   ulonglong icp_match;
-  uint      active;                      /* <> 0 if status has to be updated */
+  ulonglong icp_miss;
+  uint active; /* <> 0 if status has to be updated */
 
   ha_handler_stats()
   {
@@ -61,7 +62,7 @@ public:
   }
 
 #define first_stat pages_accessed
-#define last_stat  icp_match
+#define last_stat  icp_miss
   inline void reset()
   {
     bzero((void*) this, sizeof(*this));

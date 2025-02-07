@@ -873,6 +873,7 @@ show status like "Handler_icp%";
 Variable_name	Value
 Handler_icp_attempts	0
 Handler_icp_match	0
+Handler_icp_miss	0
 SELECT * FROM t1 FORCE INDEX(c1) WHERE (c1='3' or c1='4') and c1 % 2 = 0 ;
 c1	c2
 4	4
@@ -880,6 +881,7 @@ show status like "Handler_icp%";
 Variable_name	Value
 Handler_icp_attempts	2
 Handler_icp_match	1
+Handler_icp_miss	1
 SELECT * FROM t1 WHERE (c2='3' or c2='4') and c2 % 2 = 0 ;
 c1	c2
 4	4
@@ -887,6 +889,7 @@ show status like "Handler_icp%";
 Variable_name	Value
 Handler_icp_attempts	2
 Handler_icp_match	1
+Handler_icp_miss	1
 DROP TABLE t1;
 create table t1 (a int,b char(5),primary key (a), key (b(1)));
 insert ignore into t1 values ('a','b');
