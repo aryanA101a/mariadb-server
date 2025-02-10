@@ -27090,14 +27090,6 @@ static void prepare_for_reverse_ordered_access(JOIN_TAB *tab)
     tab->read_first_record= join_init_read_record;
   }
   /*
-    Cancel Pushed Index Condition, as it doesn't work for reverse scans.
-  */
-  if (tab->select && tab->select->pre_idx_push_select_cond)
-  {
-    tab->set_cond(tab->select->pre_idx_push_select_cond);
-     tab->table->file->cancel_pushed_idx_cond();
-  }
-  /*
     The same with Rowid Filter: it doesn't work with reverse scans so cancel
     it, too.
   */
