@@ -2992,5 +2992,39 @@ SELECT * FROM t2;
 DROP TABLE t1, t2;
 
 --echo #
+--echo # MDEV-10164: Add support for TRIGGERS that fire on multiple events
+--echo #
+CREATE TABLE t1 (a INT);
+CREATE TABLE t2 (a INT);
+CREATE TRIGGER t1_b_any BEFORE INSERT OR UPDATE OR DELETE ON t1 FOR EACH ROW INSERT INTO t2 VALUES (1000);
+CREATE TRIGGER t1_bi BEFORE INSERT ON t1 FOR EACH ROW INSERT INTO t2 VALUES (NEW.a);
+CREATE TRIGGER t1_bu BEFORE UPDATE ON t1 FOR EACH ROW INSERT INTO t2 VALUES (NEW.a);
+CREATE TRIGGER t1_bd BEFORE DELETE ON t1 FOR EACH ROW INSERT INTO t2 VALUES (OLD.a);
+
+INSERT INTO t1 VALUES (1);
+--echo # The previous statement should fire the triggers t1_b_any and t1_bi.
+--echo # Check it. The following query should return the rows (1000), (1)
+SELECT * FROM t2;
+
+--echo # Clean up the table t2 before running the next test case
+TRUNCATE TABLE t2;
+
+UPDATE t1 SET a = -1;
+--echo # The previous statement should fire the triggers t1_b_any and t1_bu.
+--echo # Check it. The following query should return the rows (1000), (-1)
+SELECT * FROM t2;
+
+--echo # Clean up the table t2 before running the next test case
+TRUNCATE TABLE t2;
+
+DELETE FROM t1 WHERE a = -1;
+--echo # The previous statement should fire the triggers t1_b_any and t1_bu.
+--echo # Check it. The following query should return the rows (1000), (-1)
+SELECT * FROM t2;
+
+--echo # Clean up
+DROP TABLE t1, t2;
+
+--echo #
 --echo # End of 11.8 tests
 --echo #

@@ -220,8 +220,8 @@ bool LEX::set_trigger_new_row(const LEX_CSTRING *name, Item *val,
     val= new (thd->mem_root) Item_null(thd);
 
   DBUG_ASSERT(trg_chistics.action_time == TRG_ACTION_BEFORE &&
-              (trg_chistics.event == TRG_EVENT_INSERT ||
-               trg_chistics.event == TRG_EVENT_UPDATE));
+              (is_trg_event_on(trg_chistics.events, TRG_EVENT_INSERT) ||
+               is_trg_event_on(trg_chistics.events, TRG_EVENT_UPDATE)));
 
   trg_fld= new (thd->mem_root)
             Item_trigger_field(thd, current_context(),
@@ -8234,21 +8234,23 @@ Item *LEX::create_and_link_Item_trigger_field(THD *thd,
 {
   Item_trigger_field *trg_fld;
 
-  if (unlikely(trg_chistics.event == TRG_EVENT_INSERT && !new_row))
+  if (unlikely(is_trg_event_on(trg_chistics.events, TRG_EVENT_INSERT) &&
+               !new_row))
   {
     my_error(ER_TRG_NO_SUCH_ROW_IN_TRG, MYF(0), "OLD", "on INSERT");
     return NULL;
   }
 
-  if (unlikely(trg_chistics.event == TRG_EVENT_DELETE && new_row))
+  if (unlikely(is_trg_event_on(trg_chistics.events, TRG_EVENT_DELETE) &&
+               new_row))
   {
     my_error(ER_TRG_NO_SUCH_ROW_IN_TRG, MYF(0), "NEW", "on DELETE");
     return NULL;
   }
 
   DBUG_ASSERT(!new_row ||
-              (trg_chistics.event == TRG_EVENT_INSERT ||
-               trg_chistics.event == TRG_EVENT_UPDATE));
+              (is_trg_event_on(trg_chistics.events, TRG_EVENT_INSERT) ||
+               is_trg_event_on(trg_chistics.events, TRG_EVENT_UPDATE)));
 
   const bool tmp_read_only=
     !(new_row && trg_chistics.action_time == TRG_ACTION_BEFORE);
@@ -8930,7 +8932,7 @@ bool LEX::set_trigger_field(const LEX_CSTRING *name1, const LEX_CSTRING *name2,
     my_error(ER_TRG_CANT_CHANGE_ROW, MYF(0), "OLD", "");
     return true;
   }
-  if (unlikely(trg_chistics.event == TRG_EVENT_DELETE))
+  if (unlikely(is_trg_event_on(trg_chistics.events, TRG_EVENT_DELETE)))
   {
     my_error(ER_TRG_NO_SUCH_ROW_IN_TRG, MYF(0), "NEW", "on DELETE");
     return true;
