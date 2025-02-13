@@ -661,6 +661,7 @@ log_t::resize_start_status log_t::resize_start(os_offset_t size) noexcept
         else if (!is_opened())
           resize_log.close();
 
+        resize_lsn.store(start_lsn, std::memory_order_relaxed);
         writer_update();
       }
       status= success ? RESIZE_STARTED : RESIZE_FAILED;
@@ -1193,7 +1194,7 @@ ATTRIBUTE_COLD static lsn_t log_writer_resizing() noexcept
 void log_t::writer_update() noexcept
 {
   ut_ad(latch_have_wr());
-  writer= resize_in_progress() ? log_writer_resizing : log_writer;
+  writer= resize_in_progress() > 1 ? log_writer_resizing : log_writer;
   mtr_t::finisher_update();
 }
 
